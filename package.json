@@ -19,7 +19,7 @@
   "homepage": "https://github.com/sauvag-c/DiscordBotVocal#readme",
   "dependencies": {
     "discord.js": "^12.5.3",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
     "eslint": "^7.23.0"
   }
 }
