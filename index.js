@@ -77,12 +77,17 @@ client.on('message', async message => {
             fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
         }
         download(param[2], fileName, () => {
-            db.get('SELECT ID FROM MEME_SONG WHERE CMD = ? and SERVER = ?', param[1], message.guild.id.toString(), (error, row) => {
+            db.get('SELECT ID, PATH FROM MEME_SONG WHERE CMD = ? and SERVER = ?', param[1], message.guild.id.toString(), (error, row) => {
                 if (error) {
                     console.log(error);
                 }
                 if (row) {
-                    db.run('UPDATE MEME_SONG SET PATH = ? WHERE ID = ?', fileName, row['ID']);
+                    fs.unlink(row.PATH, (error) => {
+                        if (error) {
+                            console.log(error);
+                        }
+                    });
+                    db.run('UPDATE MEME_SONG SET PATH = ? WHERE ID = ?', fileName, row.ID);
                 }
                 else {
                     db.run('INSERT INTO MEME_SONG (PATH, CMD, SERVER) VALUES(?, ?, ?)', fileName, param[1], message.guild.id.toString());
