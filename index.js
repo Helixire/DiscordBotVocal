@@ -11,7 +11,7 @@ const path = require('path');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
 const db = new sqlite3.Database(config.dbName);
-const model = new vosk.Model("Model");
+const models = config.models.map(path => new vosk.Model(path));
 
 db.run("CREATE TABLE IF NOT EXISTS MEME_SONG(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, PATH TEXT NOT NULL, CMD TEXT NOT NULL, SERVER TEXT NOT NULL);");
 
@@ -34,7 +34,6 @@ client.on('message', async message => {
                 if (user.user.bot) {
                     return;
                 }
-                console.log('init stream');
                 let mixer = new Mixer({
                     channels: 1,
                     bitDepth: 16,
@@ -46,13 +45,14 @@ client.on('message', async message => {
                     sampleRate: 48000,
                 });
 
-                const rec = new vosk.Recognizer({ model: model, sampleRate: 48000.0 });
+                const recs = models.map(model=> new vosk.Recognizer({ model: model, sampleRate: 48000.0 }));
                 const audio = connection.receiver.createStream(user, { mode: 'pcm', end: 'manual' });
 
-                console.log('end init stream');
                 const parserWriter = new Writable({
                     write(chunk, encoding, callback) {
-                        rec.acceptWaveform(chunk);
+                        recs.forEach((rec) =>{
+                            rec.acceptWaveform(chunk);
+                        })
                         let empty = true;
                         for (let i = 0; i < chunk.length; i++) {
                             if (chunk[i]) {
@@ -61,7 +61,11 @@ client.on('message', async message => {
                             }
                         }
                         if (empty) {
-                            console.log(rec.finalResult());
+                            recs.forEach((rec) =>{
+                                if ((a=rec.finalResult()).text)
+                                console.log(a);
+
+                            });
                         }
                         callback();
                     }
