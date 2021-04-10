@@ -1,6 +1,6 @@
 {
 	"prefix": "!",
-	"token": "ODMwMTk0NDY3MDUwMDk0NjEz.YHDI2Q.0-XFmJM091QzMWIE9mIVsmzHxDA",
-    "saveFolder":"C:/Users/lordk/Documents/git/DiscordBotVocal/meme/",
+	"token": "TOKEN",
+    "saveFolder":"meme",
     "dbName":"memeDB.db"
 }

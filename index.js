@@ -76,9 +76,7 @@ client.on('message', async message => {
         while (fs.existsSync(fileName)) {
             fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
         }
-        console.log('download')
         download(param[2], fileName, () => {
-            console.log('endDownload')
             db.get('SELECT ID FROM MEME_SONG WHERE CMD = ? and SERVER = ?', param[1], message.guild.id.toString(), (error, row) => {
                 if (error) {
                     console.log(error);
