@@ -7,6 +7,7 @@ const config = require('./config.json');
 const fs = require('fs');
 const request = require('request');
 const { Client, Intents } = require('discord.js');
+const path = require('path');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
 const db = new sqlite3.Database(config.dbName);
@@ -71,11 +72,13 @@ client.on('message', async message => {
         }
     }
     else if (param[0] == '!addmeme') {
-        fileName = config.saveFolder + nanoid.nanoid() + '.mp3';
+        fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
         while (fs.existsSync(fileName)) {
-            fileName = config.saveFolder + nanoid.nanoid() + '.mp3';
+            fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
         }
+        console.log('download')
         download(param[2], fileName, () => {
+            console.log('endDownload')
             db.get('SELECT ID FROM MEME_SONG WHERE CMD = ? and SERVER = ?', param[1], message.guild.id.toString(), (error, row) => {
                 if (error) {
                     console.log(error);
