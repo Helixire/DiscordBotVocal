@@ -1,17 +1,15 @@
 const nanoid = require('nanoid');
-const vosk = require('vosk');
-const { Readable, Writable } = require('stream');
-const { Mixer } = require('audio-mixer');
 const sqlite3 = require('sqlite3');
 const config = require('./config.json');
 const fs = require('fs');
 const request = require('request');
 const { Client, Intents } = require('discord.js');
 const path = require('path');
+const { freemem } = require('os');
+const { Connection } = require('./class/Connection');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
 const db = new sqlite3.Database(config.dbName);
-const models = config.models.map(path => new vosk.Model(path));
 
 db.run("CREATE TABLE IF NOT EXISTS MEME_SONG(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, PATH TEXT NOT NULL, CMD TEXT NOT NULL, SERVER TEXT NOT NULL);");
 
@@ -23,56 +21,31 @@ const download = (url, path, callback) => {
     })
 };
 
+const connections = {}
+
+const getConnection = (guild) => {
+    if (!(guild in connections)) {
+        connections[guild] = new Connection();
+    }
+    return connections[guild];
+}
+
+const disconnect = (guild) => {
+    let connection = connections[guild];
+    if (connection) {
+        connection.clean();
+        connections[guild] = null;
+    }
+}
+
+
 client.on('message', async message => {
     param = message.content.split(' ');
     //if talk directly to onii-chan he don't crash
     if (!message.guild) return;
     if (param[0] == "!listen") {
         if (message.member.voice.channel) {
-            const connection = await message.member.voice.channel.join();
-            message.member.voice.channel.members.each((user, id) => {
-                if (user.user.bot) {
-                    return;
-                }
-                let mixer = new Mixer({
-                    channels: 1,
-                    bitDepth: 16,
-                    sampleRate: 48000,
-                });
-                let discordInput = mixer.input({
-                    channels: 2,
-                    bitDepth: 16,
-                    sampleRate: 48000,
-                });
-
-                const recs = models.map(model=> new vosk.Recognizer({ model: model, sampleRate: 48000.0 }));
-                const audio = connection.receiver.createStream(user, { mode: 'pcm', end: 'manual' });
-
-                const parserWriter = new Writable({
-                    write(chunk, encoding, callback) {
-                        recs.forEach((rec) =>{
-                            rec.acceptWaveform(chunk);
-                        })
-                        let empty = true;
-                        for (let i = 0; i < chunk.length; i++) {
-                            if (chunk[i]) {
-                                empty = false;
-                                break;
-                            }
-                        }
-                        if (empty) {
-                            recs.forEach((rec) =>{
-                                if ((a=rec.finalResult()).text)
-                                console.log(a);
-
-                            });
-                        }
-                        callback();
-                    }
-                });
-                mixer.pipe(parserWriter);
-                audio.pipe(discordInput);
-            })
+            getConnection(message.guild.id).startParser(message.member.voice.channel);
         }
     }
     else if (param[0] == '!addmeme') {
@@ -91,6 +64,7 @@ client.on('message', async message => {
                 else {
                     db.run('INSERT INTO MEME_SONG (PATH, CMD, SERVER) VALUES(?, ?, ?)', fileName, param[1], message.guild.id.toString());
                 }
+                message.channel.send('I DID IT ONII-CHAN');
             });
 
         })
@@ -108,13 +82,15 @@ client.on('message', async message => {
                     message.channel.send('Tasukete kure comando inconnue !');
                     return;
                 }
-                const connection = await message.member.voice.channel.join();
-                console.log(row['PATH']);
-                const dispatcher = connection.play(row['PATH'], { volume: 0.5 });
+                const connection = getConnection(message.guild.id)
+                const link = await connection.getCon(message.member.voice.channel);
+                const dispatcher = link.play(row['PATH'], { volume: 0.5 });
                 dispatcher.on('finish', () => {
                     console.log('Finished playing!');
                     dispatcher.destroy();
-                    connection.disconnect();
+                    if (!connection.listening()) {
+                        disconnect(message.guild.id);
+                    }
                 });
             });
         }
