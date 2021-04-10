@@ -19,11 +19,13 @@
   "homepage": "https://github.com/sauvag-c/DiscordBotVocal#readme",
   "dependencies": {
     "@discordjs/opus": "^0.5.0",
+    "audio-mixer": "^2.1.4",
     "discord.js": "^12.5.3",
     "dotenv": "^8.2.0",
     "eslint": "^7.23.0",
     "ffmpeg-static": "^4.3.0",
     "nanoid": "^3.1.22",
-    "sqlite3": "^5.0.2"
+    "sqlite3": "^5.0.2",
+    "vosk": "^0.3.24"
   }
 }
