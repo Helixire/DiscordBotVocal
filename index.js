@@ -49,9 +49,11 @@ client.on('message', async message => {
             db.get('SELECT PATH FROM MEME_SONG WHERE CMD = ? AND SERVER = ?', param[1], message.guild.id.toString(), async (error, row) => {
                 if(error){
                     message.channel.send('YAMETE la Y a des blempro dans la DB !');
+                    return;
                 }
                 if (!row){
                     message.channel.send('Tasukete kure comando inconnue !');
+                    return;
                 }
                 const connection = await message.member.voice.channel.join();
                 console.log(row['PATH']);
