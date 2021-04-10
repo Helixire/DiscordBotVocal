@@ -1,22 +1,68 @@
+const nanoid = require('nanoid');
+const sqlite3 = require('sqlite3');
 const config = require('./config.json');
+const fs = require('fs');
+const request = require('request');
 const { Client, Intents } = require('discord.js');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 
+const db = new sqlite3.Database(config.dbName);
+
+db.run("CREATE TABLE IF NOT EXISTS MEME_SONG(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, PATH TEXT NOT NULL, CMD TEXT NOT NULL, SERVER TEXT NOT NULL);");
+
+const download = (url, path, callback) => {
+    request.head(url, (err, res, body) => {
+        request(url)
+            .pipe(fs.createWriteStream(path))
+            .on('close', callback)
+    })
+};
 
 client.on('message', async message => {
+    param = message.content.split(' ');
     //if talk directly to onii-chan he don't crash
     if (!message.guild) return;
-    if (message.content === '!aniki') {
+    if (param[0] == '!addmeme') {
+        fileName = config.saveFolder + nanoid.nanoid() + '.mp3';
+        while (fs.existsSync(fileName)) {
+            fileName = config.saveFolder + nanoid.nanoid() + '.mp3';
+        }
+        download(param[2], fileName, () => {
+            db.get('SELECT ID FROM MEME_SONG WHERE CMD = ? and SERVER = ?', param[1], message.guild.id.toString(), (error, row) => {
+                if (error) {
+                    console.log(error);
+                }
+                if (row) {
+                    db.run('UPDATE MEME_SONG SET PATH = ? WHERE ID = ?', fileName, row['ID']);
+                }
+                else {
+                    db.run('INSERT INTO MEME_SONG (PATH, CMD, SERVER) VALUES(?, ?, ?)', fileName, param[1], message.guild.id.toString());
+                }
+            });
+
+        })
+
+    }
+    if (param[0] == '!aniki') {
         // Only try to join the sender's voice channel if they are in one themselves
         if (message.member.voice.channel) {
-            const connection = await message.member.voice.channel.join();
-            const dispatcher = connection.play('C:/Users/lordk/Documents/git/DiscordBotVocal/meme/run.mp3');
-            dispatcher.setVolume(0.5); // half the volume
-            dispatcher.on('finish', () => {
-                console.log('Finished playing!');
-                dispatcher.destroy();
-                connection.disconnect();
+            db.get('SELECT PATH FROM MEME_SONG WHERE CMD = ? AND SERVER = ?', param[1], message.guild.id.toString(), async (error, row) => {
+                if(error){
+                    message.channel.send('YAMETE la Y a des blempro dans la DB !');
+                }
+                if (!row){
+                    message.channel.send('Tasukete kure comando inconnue !');
+                }
+                const connection = await message.member.voice.channel.join();
+                console.log(row['PATH']);
+                const dispatcher = connection.play(row['PATH'] ,{volume:0.5});
+                dispatcher.on('finish', () => {
+                    console.log('Finished playing!');
+                    dispatcher.destroy();
+                    connection.disconnect();
+                });
             });
+
 
         }
         else {
