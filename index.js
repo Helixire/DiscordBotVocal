@@ -1,5 +1,4 @@
 const nanoid = require('nanoid');
-const Silence = require('./Silence')
 const vosk = require('vosk');
 const { Readable, Writable } = require('stream');
 const { Mixer } = require('audio-mixer');
@@ -22,8 +21,6 @@ const download = (url, path, callback) => {
             .on('close', callback)
     })
 };
-
-const silence = new Silence();
 
 client.on('message', async message => {
     param = message.content.split(' ');
