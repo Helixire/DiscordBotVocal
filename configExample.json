@@ -2,5 +2,9 @@
 	"prefix": "!",
 	"token": "TOKEN",
     "saveFolder":"meme",
-    "dbName":"memeDB.db"
+    "dbName":"memeDB.db",
+    "models" : [
+        "Model/fr",
+        "Model/en"
+    ]
 }
