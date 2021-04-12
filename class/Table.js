@@ -1,4 +1,6 @@
 const { db } = require('./db');
+const { Comparaison } = require('./Comparaison');
+const { Field } = require('./Field');
 
 const Row = class {
     constructor(table) {
@@ -16,6 +18,8 @@ module.exports.Table = class {
     constructor(name, fields, rowtype) {
         this.name = name;
         this.fields = fields;
+        this.fields.set('id', new Field('ID', 'INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL', {isId:true}));
+        this.fields.forEach(field=>field.table = this);
         this.rowconstruct = rowtype || Row;
         this.init();
     }
@@ -48,14 +52,11 @@ module.exports.Table = class {
     }
 
     get(id) {
-        return this.find({
-            toString: () => { return "ID = ?" },
-            param: [id]
-        })
+        return this.find(new Comparaison(this.fields.get('id'), '=', id));
     }
 
     find(comparaisons) {
-        return db.getP(`SELECT * FROM ${this.name}${(comparaisons) ? ` WHERE ${comparaisons.toString()}` : ''}`, (comparaisons.param) ? [...comparaisons.param] : [])
+        return db.getP(`SELECT * FROM ${this.name}${(comparaisons) ? ` WHERE ${comparaisons.toString()}` : ''}`, comparaisons && comparaisons.param || [])
             .then(row => {
                 return this.parserow(row);
             });
@@ -68,7 +69,7 @@ module.exports.Table = class {
         ${(comparaisons) ? ` WHERE ${comparaisons.toString()}` : ''}
         ${(limit) ? ` LIMIT ${limit}
         ${(offset) ? ` OFFSET ${offset}` : ''}` : ''}`,
-            (comparaisons && comparaisons.param) ? [...comparaisons.param] : [])
+            comparaisons && comparaisons.param || [])
             .then(rows => {
                 return rows.map(row=>this.parserow(row));
             });
@@ -79,16 +80,13 @@ module.exports.Table = class {
             return this.insert(row);
         }
 
-        let param = [];
-        let fieldsParam = [];
+        let cmp = new Comparaison();
         this.fields.forEach((v, k) => {
             if (k != 'id') {
-                param.push(row[k]);
-                fieldsParam.push(v.name + ' = ?');
+                cmp = new Comparaison(cmp, ',', new Comparaison(v, '=', row[k], {noTable:true}), {noPretensies:true});
             }
         });
-        param.push(row.id);
-        return db.runP(`UPDATE ${this.name} SET ${fieldsParam.join(', ')} WHERE ID = ?`, param); // TODO Gestion d'erreur
+        return db.runP(`UPDATE ${this.name} SET ${cmp.toString()} WHERE ID = ?`, [...cmp.param, row.id]); // TODO Gestion d'erreur
     }
 
     newRow() {

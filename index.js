@@ -171,17 +171,17 @@ client.on('message', async message => {
     } else if (param[0] == '!list') {
         let offset = 0;
         message.channel.send(await embedMeme(offset)).then(newMessage => {
-            newMessage.react('⬇️')
-                .then(() => { newMessage.react('⬆️') });
+            newMessage.react('⬅️')
+                .then(() => { newMessage.react('➡️') });
 
             const colector = newMessage.createReactionCollector((reaction, user) => {
-                return (reaction.emoji.name === '⬆️' || reaction.emoji.name === '⬇️') && user.id === message.author.id;
+                return (reaction.emoji.name === '⬅️' || reaction.emoji.name === '➡️') && user.id === message.author.id;
             }, { idle: 300000 });
 
             colector.on('collect', (reaction, user) => {
-                if (reaction.emoji.name === '⬆️') {
+                if (reaction.emoji.name === '⬅️') {
                     offset -= 10;
-                } else if (reaction.emoji.name === '⬇️') {
+                } else if (reaction.emoji.name === '➡️') {
                     offset += 10;
                 }
                 if (offset < 0) {
@@ -189,8 +189,8 @@ client.on('message', async message => {
                 } // TODO if offset too big
                 embedMeme(offset).then(embed => newMessage.edit(embed).then(() => {
                     newMessage.reactions.removeAll()
-                    newMessage.react('⬇️')
-                        .then(() => { newMessage.react('⬆️') });
+                    newMessage.react('⬅️')
+                        .then(() => { newMessage.react('➡️') });
                 }));
             });
 

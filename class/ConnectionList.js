@@ -1,8 +1,9 @@
 const { Connection } = require('./Connection');
+const { Collection } = require('discord.js');
 
 module.exports.ConnectionList = new class {
     constructor() {
-        this.connections = new Map();
+        this.connections = new Collection();
         this.ontext = null;
     }
 

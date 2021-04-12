@@ -2,6 +2,7 @@ const { db } = require('./db');
 const { Field } = require('./Field');
 const { Table, Row } = require('./Table');
 const { ConnectionList } = require('./ConnectionList');
+const { Collection } = require('discord.js');
 
 const Meme = class extends Row {
     constructor(table) {
@@ -23,8 +24,7 @@ const Meme = class extends Row {
 
 module.exports.MemeTable = new class extends Table {
     constructor() {
-        super("MEME_SONG", new Map([
-            ['id', new Field('ID', 'INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL')],
+        super("MEME_SONG", new Collection([
             ['path', new Field('PATH', 'TEXT NOT NULL')],
             ['cmd', new Field('CMD', 'TEXT NOT NULL')],
             ['server', new Field('SERVER', 'TEXT NOT NULL')],

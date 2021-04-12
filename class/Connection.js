@@ -1,8 +1,9 @@
 const { UserAudioParser } = require('./UserAudioParser');
+const { Collection } = require('discord.js');
 
 module.exports.Connection = class {
     constructor() {
-        this.audio = new Map();
+        this.audio = new Collection();
         this.con = null
         this.onText = null;
         this.playing = false;
