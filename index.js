@@ -11,6 +11,7 @@ const { brotliDecompress } = require('zlib');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { db } = require('./class/db');
 const { MemeTable } = require('./class/Meme');
+const { Comparaison } = require('./class/Comparaison');
 
 db.run("CREATE TABLE IF NOT EXISTS MEME_TRIGER(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ID_SONG INTEGER NOT NULL, TRIGER TEXT NOT NULL);")
 
@@ -73,7 +74,6 @@ client.on('voiceStateUpdate', (oldState, newState) => {
     // Si l'utilisateur a changer de channel
     if (oldState.channelID != newState.channelID) {
         if (oldState.channelID && newState.channelID && newState.member.user.id == client.user.id) { // If moove BOT manualy
-            console.log(oldState.channelID, newState.channelID);
             connection.startParser(newState.channel);
         }
         else if (oldState.channelID == connection.con.channel.id) { //Deco
@@ -90,7 +90,6 @@ client.on('message', async message => {
     param = message.content.split(' ');
     //if talk directly to onii-chan he don't crash
     if (!message.guild) return;
-    //console.log(message);
     if (param[0] == "!listen") {
         if (message.member.voice.channel) {
             ConnectionList.getConnection(message.guild.id).startParser(message.member.voice.channel);
@@ -106,10 +105,10 @@ client.on('message', async message => {
         }
         console.log('Start download ' + param[1]);
         download(param[2], fileName, async () => {
-            let meme = await MemeTable.find({
-                toString: () => { return "CMD = ? and SERVER = ?" },
-                param: [param[1], message.guild.id.toString()]
-            })
+            let meme = await MemeTable.find(new Comparaison(
+                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+                new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
+                );
             if (meme.id) {
                 fs.unlink(meme.path, (error) => {
                     if (error) {
@@ -134,10 +133,10 @@ client.on('message', async message => {
     else if (param[0] == '!aniki' && param[1]) {
         // Only try to join the sender's voice channel if they are in one themselves
         if (message.member.voice.channel) {
-            let meme = await MemeTable.find({
-                toString: () => { return "CMD = ? and SERVER = ?" },
-                param: [param[1], message.guild.id.toString()]
-            });
+            let meme = await MemeTable.find(new Comparaison(
+                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+                new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
+                );
             if (!meme.id) {
                 message.channel.send('Tasukete kure comando inconnue !');
                 return;
@@ -150,10 +149,10 @@ client.on('message', async message => {
     } else if (param[0] == '!bye') {
         ConnectionList.disconnect(message.guild.id);
     } else if (param[0] == '!link' && param[1] && param[2]) {
-        let meme = await MemeTable.find({
-            toString: () => { return "CMD = ? and SERVER = ?" },
-            param: [param[1], message.guild.id.toString()]
-        });
+        let meme = await MemeTable.find(new Comparaison(
+            new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+            new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
+            );
         if (!meme.id) {
             message.channel.send('Baka Aniki ! Commande not found !');
             return;

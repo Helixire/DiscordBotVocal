@@ -114,7 +114,6 @@ module.exports.Table = class {
         });
         return db.runP(`INSERT INTO ${this.name} (${fieldsName.join(',')}) VALUES (${Array.from('?'.repeat(this.fields.size - 1)).join(',')})`, param).then(obj => {
             row.id = obj.lastID;
-            console.log(row, obj);
         });
     }
 }

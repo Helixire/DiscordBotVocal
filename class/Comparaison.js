@@ -22,10 +22,6 @@ const Comparaison = class {
         return '?';
     }
 
-    chain(cmp) {
-
-    }
-
     toString() {
         return this.string;
     }
