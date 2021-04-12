@@ -2,47 +2,112 @@ const { UserAudioParser } = require('./UserAudioParser');
 
 module.exports.Connection = class {
     constructor() {
-        this.channel = null;
-        this.audio = []
+        this.audio = new Map();
         this.con = null
+        this.onText = null;
+        this.playing = false;
+        this.listening = false;
     }
 
     clean() {
-        console.log('free Connection');
-        this.audio.forEach((audio)=> {
-            audio.free();
+        this.listening = false;
+        this.audio.forEach((a) => {
+            a.free();
         });
-        this.channel = null;
-        this.con.disconnect();
-        this.con = null;
+        this.audio.clear();
     }
 
-    listening() {
-        return this.audio.length
+    disconnect() {
+        if (this.con) {
+            this.clean();
+            this.con.disconnect();
+            this.con = null;
+        }
+    }
+
+    ontext(funct) {
+        this.audio.forEach((audio) => {
+            audio.on('text', funct);
+        })
+        this.onText = funct;
+    }
+
+    async playSound(path, channel) {
+        if (this.playing) {
+            return false;
+        }
+        if (!(await this.getCon(channel))) {
+            return false;
+        }
+        this.playing = true;
+        this.audio.forEach((a) => {
+            a.setParsing(false);
+        })
+        const dispatcher = this.con.play(path);
+        dispatcher.on('finish', () => {
+            console.log('Finished playing!');
+            this.playing = false;
+            this.audio.forEach((a) => {
+                a.setParsing(true);
+            })
+            dispatcher.destroy();
+            if (!this.listening) {
+                this.disconnect();
+            }
+        });
+        return true;
     }
 
     async getCon(channel) {
-        if (this.channel && channel.id != this.channel.id) {
-            this.clean();
-        }
         if (!this.con) {
-            this.channel = channel
+            if (!channel) {
+                console.log('connard pas de con ni channel');
+                return null;
+            }
+            this.clean();
             this.con = await channel.join();
+        }
+        if (channel && this.con.channel.id != channel.id) {
+            this.clean();
+            let n = await channel.join();
+            console.log(this.con.id, n.id);
         }
         return this.con;
     }
 
-    async startParser(channel) {
-        var chan = channel || this.channel;
-        if (!chan) {
-            console.log('trou duc j\'ai pas de channel')
+    addAudioUser(member) {
+        if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
+            return;
         }
-        await this.getCon(chan);
-        this.audio = this.channel.members.map((user, id) => {
-            if (user.user.bot) {
-                return;
-            }
-            return new UserAudioParser(this.con, user);
-        })
+        let ret = new UserAudioParser(this, member);
+        if (this.onText) {
+            ret.on('text', this.onText);
+        }
+        console.log('hi ' + member.displayName);
+        this.audio.set(member.user.id, ret);
+    }
+
+    removeAudioUser(member) {
+        let audio = this.audio.get(member.user.id);
+
+        if (audio) {
+            audio.free();
+            this.audio.delete(member.user.id);
+            console.log('bye ' + member.displayName);
+        }
+    }
+
+    async startParser(channel) {
+        if (!(await this.getCon(channel))) {
+            return;
+        }
+        if (this.audio.size) {
+            return;
+        }
+        console.log('startParser')
+        this.listening = true;
+        for (let member of this.con.channel.members.values()) {
+            this.addAudioUser(member);
+        }
     }
 }

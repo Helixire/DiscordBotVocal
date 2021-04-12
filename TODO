@@ -1,10 +1,15 @@
-- Quand on change le son de la commande supprimer l'ancien fichier
-- commande de deconnection
-- detecter le volume d'un son
++ Quand on change le son de la commande supprimer l'ancien fichier
++ commande de deconnection
++ activation vocal (IA)
++ reconnaitre en anglais et en français tester les deux pour activation de meme
++ Gestion si utilisateur se co ou se deco pendant que le bot est lancer
++ free
++ don't trigger on low confidence
++ cooldown per meme (100 sec)
+- cmd list remove arrow if in border of list
+- list link
+- cmd list and delete
 - continious deployement
+- volume on commande // DEBATABLE
 - enregistrer depuis YT
 - enregistrer tout le monde pour creer des sons
-- activation vocal (IA)
-- reconnaitre en anglais et en français tester les deux pour activation de meme
-- Gestion si utilisateur se co ou se deco pendant que le bot est lancer
-- free
