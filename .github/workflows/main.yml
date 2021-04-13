@@ -38,6 +38,7 @@ jobs:
           echo "SERVER_IP=${{ secrets.SERVER_IP }}" >> .env
           echo "SERVER_PATH=${{ secrets.SERVER_PATH }}" >> .env
           echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> .env
+          cat .env
       - name: install PM2
         run: npm i pm2
       - name: Deploy
