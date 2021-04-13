@@ -9,6 +9,7 @@ module.exports = {
       user : process.env.SERVER_USER,
       host : process.env.SERVER_IP,
       port : process.env.SERVER_PORT,
+      key: 'deploy.key',
       ref  : 'origin/master',
       repo : 'https://github.com/sauvag-c/DiscordBotVocal.git',
       path : process.env.SERVER_PATH,
