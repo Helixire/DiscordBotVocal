@@ -31,5 +31,14 @@ jobs:
         with:
           # Private SSH key to register in the SSH agent
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      - name: pull
-        run: ssh -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} 'cd ${{ secrets.SERVER_PATH }};git pull'
+      - name: env
+        run: |
+          touch .env
+          echo "SERVER_USER=${{ secrets.SERVER_USER }}" >> .env
+          echo "SERVER_IP=${{ secrets.SERVER_IP }}" >> .env
+          echo "SERVER_PATH=${{ secrets.SERVER_PATH }}" >> .env
+          echo "SERVER_PORT=${{ secrets.SERVER_PORT }}" >> .env
+      - name: install PM2
+        run: npm i pm2
+      - name: Deploy
+        run: npm run deploy
