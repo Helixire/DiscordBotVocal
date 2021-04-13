@@ -95,7 +95,7 @@ client.on('message', async message => {
             ConnectionList.getConnection(message.guild.id).startParser(message.member.voice.channel);
         }
     }
-    else if (param[0] == '!addmeme' && param[1] && param[2] || message.attachments.size) {
+    else if (param[0] == '!addmeme' && param[1] && (param[2] || message.attachments.size)) {
         if (!param[2] && message.attachments.size) {
             param.push(message.attachments.values().next().value.url);
         }

@@ -21,7 +21,7 @@ module.exports.ConnectionList = new class {
         let connection = this.connections.get(guild);
         if (connection) {
             connection.disconnect();
-            this.connections.remove(guild);
+            this.connections.delete(guild);
         }
     }
 }
