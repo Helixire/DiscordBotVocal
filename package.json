@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "env $(cat .env | grep -v \"#\" | xargs) pm2 deploy ecosystem.config.js production --force"
+    "deploy": "env $(cat .env | grep -v \"#\" | xargs) pm2 deploy ecosystem.config.js production update --force"
   },
   "repository": {
     "type": "git",
