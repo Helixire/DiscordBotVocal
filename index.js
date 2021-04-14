@@ -4,10 +4,7 @@ const fs = require('fs');
 const request = require('request');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 const path = require('path');
-const { freemem } = require('os');
 const { ConnectionList } = require('./class/ConnectionList');
-const { isRegExp } = require('util');
-const { brotliDecompress } = require('zlib');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { db } = require('./class/db');
 const { MemeTable } = require('./class/Meme');
@@ -32,14 +29,8 @@ const embedMeme = async (offset) => {
     });
 }
 
-ConnectionList.ontext = (user, text) => {
-    console.log(text.text);
-    let string = '';
-    text.result.forEach(element => {
-        if (element.conf > 0.5) {
-            string += ' ' + element.word;
-        }
-    });
+ConnectionList.ontext = (text, parser) => {
+    console.log(text);
     db.get(`SELECT
                 MEME_SONG.ID,
                 MEME_TRIGER.TRIGER
@@ -49,11 +40,12 @@ ConnectionList.ontext = (user, text) => {
             WHERE ?1 LIKE '% ' || MEME_TRIGER.TRIGER || ' %'
                 OR ?1 LIKE '% ' || MEME_TRIGER.TRIGER
                 OR ?1 LIKE MEME_TRIGER.TRIGER || ' %'
-                OR ?1 LIKE MEME_TRIGER.TRIGER`, string, async (err, row) => {
+                OR ?1 LIKE MEME_TRIGER.TRIGER`, text, async (err, row) => {
         if (err) {
             console.log('select ' + err);
         }
         if (row) {
+            parser.str += text.length;
             let meme = await MemeTable.get(row.ID);
             console.log('---TRIGERR---');
             console.log(row.TRIGER);

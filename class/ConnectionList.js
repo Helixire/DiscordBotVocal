@@ -11,7 +11,7 @@ module.exports.ConnectionList = new class {
         let ret = this.connections.get(guild);
         if (!ret) {
             ret = new Connection();
-            ret.ontext(this.ontext);
+            ret.ontext = this.ontext;
             this.connections.set(guild, ret);
         }
         return ret;
