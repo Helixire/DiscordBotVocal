@@ -29,14 +29,8 @@ const embedMeme = async (offset) => {
     });
 }
 
-ConnectionList.ontext = (text) => {
-    console.log(text.text);
-    let string = '';
-    text.result.forEach(element => {
-        if (element.conf > 0.5) {
-            string += ' ' + element.word;
-        }
-    });
+ConnectionList.ontext = (text, parser) => {
+    console.log(text);
     db.get(`SELECT
                 MEME_SONG.ID,
                 MEME_TRIGER.TRIGER
@@ -46,11 +40,12 @@ ConnectionList.ontext = (text) => {
             WHERE ?1 LIKE '% ' || MEME_TRIGER.TRIGER || ' %'
                 OR ?1 LIKE '% ' || MEME_TRIGER.TRIGER
                 OR ?1 LIKE MEME_TRIGER.TRIGER || ' %'
-                OR ?1 LIKE MEME_TRIGER.TRIGER`, string, async (err, row) => {
+                OR ?1 LIKE MEME_TRIGER.TRIGER`, text, async (err, row) => {
         if (err) {
             console.log('select ' + err);
         }
         if (row) {
+            parser.str += text.length;
             let meme = await MemeTable.get(row.ID);
             console.log('---TRIGERR---');
             console.log(row.TRIGER);

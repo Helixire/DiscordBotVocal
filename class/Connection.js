@@ -10,7 +10,7 @@ const models = config.models.map(path => new vosk.Model(path));
 module.exports.Connection = class {
     constructor() {
         this.audio = new Collection();
-        this.parsers = models.map(model => new vosk.Recognizer({ model: model, sampleRate: 48000.0 }));
+        this.parsers = models.map(model => {return {parser:new vosk.Recognizer({ model: model, sampleRate: 48000.0 }), str:0}});
         this.con = null
         this.onText = null;
         this.playing = false;
@@ -24,16 +24,31 @@ module.exports.Connection = class {
         this.mixer.on('data', chunk=>this.parsepacket(chunk));
     }
 
+    nth_ocurrence(str, needle, nth) {
+        for (let i=str.length;i>0;i--) {
+          if (str.charAt(i) == needle) {
+              if (!--nth) {
+                 return i;    
+              }
+          }
+        }
+        return false;
+      }
+
     parsepacket(chunk) {
         if (!this.parsing) {
             return;
         }
         this.parsers.forEach((rec) =>{
-            rec.acceptWaveform(chunk);
-            // let a = rec.partialResult();
-            // if (a.partial) {
-            //     console.log(a);
-            // }
+            rec.parser.acceptWaveform(chunk);
+            let a = rec.parser.partialResult();
+            if (a.partial) {
+                a = a.partial.substring(rec.str, this.nth_ocurrence(a.partial, ' ', 3));
+                if (a) {
+                    this.ontext(a, rec);
+                    console.log(a);
+                }
+            }
         })
         let empty = 0;
         for (let i = 0; i < chunk.length; i++) {
@@ -44,9 +59,10 @@ module.exports.Connection = class {
         }
         if (empty > 100) {
             this.parsers.forEach((rec) =>{
-                let a  = rec.finalResult();
+                let a  = rec.parser.finalResult();
                 if (a.text) {
-                    this.ontext(a);
+                    this.ontext(a.text, rec);
+                    rec.str = 0;
                 }
             });
         }
