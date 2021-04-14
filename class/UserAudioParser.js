@@ -1,20 +1,15 @@
 const config = require('../config.json');
 const vosk = require('vosk');
-const { Readable, Writable } = require('stream');
 const { Mixer } = require('audio-mixer');
 const EventEmitter = require('events');
-const { ReactionUserManager } = require('discord.js');
-
+const { Collection } = require('discord.js');
 
 const models = config.models.map(path => new vosk.Model(path));
 
-module.exports.UserAudioParser = class extends EventEmitter{
-    constructor(con, user) {
-        super();
+let UserAudioParser = class {
+    constructor(audio) {
         this.parsers = models.map(model => new vosk.Recognizer({ model: model, sampleRate: 48000.0 }));
-        this.audio = con.con.receiver.createStream(user, { mode: 'pcm', end: 'manual' });
-        this.user = user;
-        this.con = con;
+        this.audio = audio;
         this.parsing = true;
         this.mixer = new Mixer({
             channels: 1,
@@ -55,7 +50,7 @@ module.exports.UserAudioParser = class extends EventEmitter{
             this.parsers.forEach((rec) =>{
                 let a  = rec.finalResult();
                 if (a.text) {
-                    this.emit('text', this, a)
+                    process.send({type:'text', text:a});
                 }
             });
         }
@@ -74,3 +69,21 @@ module.exports.UserAudioParser = class extends EventEmitter{
         this.audio = null;
     }
 }
+
+const users = new Collection();
+
+process.on('message', (msg)=>{
+    console.log('msg', msg);
+    if (msg.type === 'add') {
+        users.set(msg.user, new UserAudioParser(msg.audio.createStream(member, { mode: 'pcm', end: 'manual' })));
+    }
+    else if (msg.type === 'remove') {
+        let audio = users.get(msg.user);
+        if (audio) {
+            audio.free();
+            users.delete(id);
+        }
+    }
+});
+
+process.send({type:'ready'});

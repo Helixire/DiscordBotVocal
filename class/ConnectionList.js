@@ -4,14 +4,12 @@ const { Collection } = require('discord.js');
 module.exports.ConnectionList = new class {
     constructor() {
         this.connections = new Collection();
-        this.ontext = null;
     }
 
     getConnection(guild) {
         let ret = this.connections.get(guild);
         if (!ret) {
-            ret = new Connection();
-            ret.ontext(this.ontext);
+            ret = new Connection(guild);
             this.connections.set(guild, ret);
         }
         return ret;

@@ -1,21 +1,16 @@
-const { UserAudioParser } = require('./UserAudioParser');
-const { Collection } = require('discord.js');
+const { ParserManager } = require('./ParserManager');
 
 module.exports.Connection = class {
-    constructor() {
-        this.audio = new Collection();
+    constructor(guild) {
+        this.guild = guild;
         this.con = null
-        this.onText = null;
         this.playing = false;
         this.listening = false;
     }
 
     clean() {
         this.listening = false;
-        this.audio.forEach((a) => {
-            a.free();
-        });
-        this.audio.clear();
+        ParserManager.sweep(this.guild);
     }
 
     disconnect() {
@@ -26,13 +21,6 @@ module.exports.Connection = class {
         }
     }
 
-    ontext(funct) {
-        this.audio.forEach((audio) => {
-            audio.on('text', funct);
-        })
-        this.onText = funct;
-    }
-
     async playSound(path, channel) {
         if (this.playing) {
             return false;
@@ -41,16 +29,16 @@ module.exports.Connection = class {
             return false;
         }
         this.playing = true;
-        this.audio.forEach((a) => {
-            a.setParsing(false);
-        })
+        // this.audio.forEach((a) => {
+        //     a.setParsing(false);
+        // })
         const dispatcher = this.con.play(path);
         dispatcher.on('finish', () => {
             console.log('Finished playing!');
             this.playing = false;
-            this.audio.forEach((a) => {
-                a.setParsing(true);
-            })
+            // this.audio.forEach((a) => {
+            //     a.setParsing(true);
+            // })
             dispatcher.destroy();
             if (!this.listening) {
                 this.disconnect();
@@ -77,32 +65,19 @@ module.exports.Connection = class {
     }
 
     addAudioUser(member) {
-        if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
+        if (member.user.bot) {
             return;
         }
-        let ret = new UserAudioParser(this, member);
-        if (this.onText) {
-            ret.on('text', this.onText);
-        }
+        ParserManager.add(this.con, member);
         console.log('hi ' + member.displayName);
-        this.audio.set(member.user.id, ret);
     }
 
     removeAudioUser(member) {
-        let audio = this.audio.get(member.user.id);
-
-        if (audio) {
-            audio.free();
-            this.audio.delete(member.user.id);
-            console.log('bye ' + member.displayName);
-        }
+        ParserManager.remove(member);
     }
 
     async startParser(channel) {
         if (!(await this.getCon(channel))) {
-            return;
-        }
-        if (this.audio.size) {
             return;
         }
         console.log('startParser')

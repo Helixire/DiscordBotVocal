@@ -4,14 +4,14 @@ const fs = require('fs');
 const request = require('request');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 const path = require('path');
-const { freemem } = require('os');
 const { ConnectionList } = require('./class/ConnectionList');
-const { isRegExp } = require('util');
-const { brotliDecompress } = require('zlib');
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { db } = require('./class/db');
 const { MemeTable } = require('./class/Meme');
 const { Comparaison } = require('./class/Comparaison');
+const { ParserManager } = require('./class/ParserManager');
+
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
+
 
 db.run("CREATE TABLE IF NOT EXISTS MEME_TRIGER(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ID_SONG INTEGER NOT NULL, TRIGER TEXT NOT NULL);")
 
@@ -32,7 +32,7 @@ const embedMeme = async (offset) => {
     });
 }
 
-ConnectionList.ontext = (user, text) => {
+ParserManager.ontext = (text) => {
     console.log(text.text);
     let string = '';
     text.result.forEach(element => {
