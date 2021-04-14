@@ -4,10 +4,7 @@ const fs = require('fs');
 const request = require('request');
 const { Client, Intents, MessageEmbed } = require('discord.js');
 const path = require('path');
-const { freemem } = require('os');
 const { ConnectionList } = require('./class/ConnectionList');
-const { isRegExp } = require('util');
-const { brotliDecompress } = require('zlib');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
 const { db } = require('./class/db');
 const { MemeTable } = require('./class/Meme');
@@ -32,7 +29,7 @@ const embedMeme = async (offset) => {
     });
 }
 
-ConnectionList.ontext = (user, text) => {
+ConnectionList.ontext = (text) => {
     console.log(text.text);
     let string = '';
     text.result.forEach(element => {

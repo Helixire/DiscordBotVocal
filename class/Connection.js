@@ -1,13 +1,55 @@
 const { UserAudioParser } = require('./UserAudioParser');
 const { Collection } = require('discord.js');
+const { Mixer } = require('audio-mixer');
+const config = require('../config.json');
+const vosk = require('vosk');
+
+const models = config.models.map(path => new vosk.Model(path));
+
 
 module.exports.Connection = class {
     constructor() {
         this.audio = new Collection();
+        this.parsers = models.map(model => new vosk.Recognizer({ model: model, sampleRate: 48000.0 }));
         this.con = null
         this.onText = null;
         this.playing = false;
         this.listening = false;
+        this.parsing = true;
+        this.mixer = new Mixer({
+            channels: 1,
+            bitDepth: 16,
+            sampleRate: 48000,
+        });
+        this.mixer.on('data', chunk=>this.parsepacket(chunk));
+    }
+
+    parsepacket(chunk) {
+        if (!this.parsing) {
+            return;
+        }
+        this.parsers.forEach((rec) =>{
+            rec.acceptWaveform(chunk);
+            // let a = rec.partialResult();
+            // if (a.partial) {
+            //     console.log(a);
+            // }
+        })
+        let empty = 0;
+        for (let i = 0; i < chunk.length; i++) {
+            if (chunk[i]) {
+                empty = 0;
+            }
+            ++empty;
+        }
+        if (empty > 100) {
+            this.parsers.forEach((rec) =>{
+                let a  = rec.finalResult();
+                if (a.text) {
+                    this.ontext(a);
+                }
+            });
+        }
     }
 
     clean() {
@@ -26,13 +68,6 @@ module.exports.Connection = class {
         }
     }
 
-    ontext(funct) {
-        this.audio.forEach((audio) => {
-            audio.on('text', funct);
-        })
-        this.onText = funct;
-    }
-
     async playSound(path, channel) {
         if (this.playing) {
             return false;
@@ -41,16 +76,12 @@ module.exports.Connection = class {
             return false;
         }
         this.playing = true;
-        this.audio.forEach((a) => {
-            a.setParsing(false);
-        })
+        this.parsing = false;
         const dispatcher = this.con.play(path);
         dispatcher.on('finish', () => {
             console.log('Finished playing!');
             this.playing = false;
-            this.audio.forEach((a) => {
-                a.setParsing(true);
-            })
+            this.parsing = true;
             dispatcher.destroy();
             if (!this.listening) {
                 this.disconnect();
@@ -80,10 +111,7 @@ module.exports.Connection = class {
         if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
             return;
         }
-        let ret = new UserAudioParser(this, member);
-        if (this.onText) {
-            ret.on('text', this.onText);
-        }
+        let ret = new UserAudioParser(this.con.receiver.createStream(member, { mode: 'pcm', end: 'manual' }), this.mixer);
         console.log('hi ' + member.displayName);
         this.audio.set(member.user.id, ret);
     }
