@@ -32,33 +32,28 @@ const embedMeme = async (offset) => {
     });
 }
 
-ParserManager.ontext = (text) => {
-    console.log(text.text);
-    let string = '';
-    text.result.forEach(element => {
-        if (element.conf > 0.5) {
-            string += ' ' + element.word;
-        }
-    });
+ParserManager.ontext = (text, userid, guildid) => {
     db.get(`SELECT
                 MEME_SONG.ID,
                 MEME_TRIGER.TRIGER
             FROM
                 MEME_SONG
             INNER JOIN MEME_TRIGER ON (MEME_SONG.ID = MEME_TRIGER.ID_SONG)
-            WHERE ?1 LIKE '% ' || MEME_TRIGER.TRIGER || ' %'
+            WHERE MEME_SONG.SERVER = ?2 AND (?1 LIKE '% ' || MEME_TRIGER.TRIGER || ' %'
                 OR ?1 LIKE '% ' || MEME_TRIGER.TRIGER
                 OR ?1 LIKE MEME_TRIGER.TRIGER || ' %'
-                OR ?1 LIKE MEME_TRIGER.TRIGER`, string, async (err, row) => {
+                OR ?1 LIKE MEME_TRIGER.TRIGER)
+            ORDER BY length(MEME_TRIGER.TRIGER) DESC`, text, guildid.toString(), async (err, row) => {
         if (err) {
             console.log('select ' + err);
         }
         if (row) {
-            let meme = await MemeTable.get(row.ID);
-            console.log('---TRIGERR---');
-            console.log(row.TRIGER);
-            console.log(text);
-            meme.play();
+            MemeTable.get(row.ID).then(meme=>{
+                console.log('---TRIGERR---');
+                console.log(row.TRIGER);
+                console.log(text);
+                meme.play();
+            });
         }
     });
 }
@@ -90,12 +85,12 @@ client.on('message', async message => {
     param = message.content.split(' ');
     //if talk directly to onii-chan he don't crash
     if (!message.guild) return;
-    if (param[0] == "!listen") {
+    if (param[0] == config.prefix + "listen") {
         if (message.member.voice.channel) {
             ConnectionList.getConnection(message.guild.id).startParser(message.member.voice.channel);
         }
     }
-    else if (param[0] == '!addmeme' && param[1] && (param[2] || message.attachments.size)) {
+    else if (param[0] == config.prefix + 'addmeme' && param[1] && (param[2] || message.attachments.size)) {
         if (!param[2] && message.attachments.size) {
             param.push(message.attachments.values().next().value.url);
         }
@@ -130,7 +125,7 @@ client.on('message', async message => {
             }
         });
     }
-    else if (param[0] == '!aniki' && param[1]) {
+    else if (param[0] == config.prefix + 'aniki' && param[1]) {
         // Only try to join the sender's voice channel if they are in one themselves
         if (message.member.voice.channel) {
             let meme = await MemeTable.find(new Comparaison(
@@ -146,9 +141,9 @@ client.on('message', async message => {
         else {
             message.channel.send('You need to join a voice channel first!');
         }
-    } else if (param[0] == '!bye') {
+    } else if (param[0] == config.prefix + 'bye') {
         ConnectionList.disconnect(message.guild.id);
-    } else if (param[0] == '!link' && param[1] && param[2]) {
+    } else if (param[0] == config.prefix + 'link' && param[1] && param[2]) {
         let meme = await MemeTable.find(new Comparaison(
             new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
             new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
@@ -167,7 +162,7 @@ client.on('message', async message => {
         db.run("INSERT INTO MEME_TRIGER (ID_SONG, TRIGER) VALUES (?, ?)", meme.id, trigger, () => {
             message.channel.send("Link connected !");
         });
-    } else if (param[0] == '!list') {
+    } else if (param[0] == config.prefix + 'list') {
         let offset = 0;
         message.channel.send(await embedMeme(offset)).then(newMessage => {
             newMessage.react('⬅️')

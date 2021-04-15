@@ -1,8 +1,9 @@
-const { ParserManager } = require('./ParserManager');
+const { UserAudioParser } = require('./UserAudioParser');
+const { Collection } = require('discord.js');
 
 module.exports.Connection = class {
-    constructor(guild) {
-        this.guild = guild;
+    constructor() {
+        this.audio = new Collection();
         this.con = null
         this.playing = false;
         this.listening = false;
@@ -10,7 +11,10 @@ module.exports.Connection = class {
 
     clean() {
         this.listening = false;
-        ParserManager.sweep(this.guild);
+        this.audio.forEach((a) => {
+            a.free();
+        });
+        this.audio.clear();
     }
 
     disconnect() {
@@ -29,16 +33,16 @@ module.exports.Connection = class {
             return false;
         }
         this.playing = true;
-        // this.audio.forEach((a) => {
-        //     a.setParsing(false);
-        // })
+        this.audio.forEach((a) => {
+            a.setParsing(false);
+        })
         const dispatcher = this.con.play(path);
         dispatcher.on('finish', () => {
             console.log('Finished playing!');
             this.playing = false;
-            // this.audio.forEach((a) => {
-            //     a.setParsing(true);
-            // })
+            this.audio.forEach((a) => {
+                a.setParsing(true);
+            })
             dispatcher.destroy();
             if (!this.listening) {
                 this.disconnect();
@@ -65,19 +69,29 @@ module.exports.Connection = class {
     }
 
     addAudioUser(member) {
-        if (member.user.bot) {
+        if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
             return;
         }
-        ParserManager.add(this.con, member);
+        let ret = new UserAudioParser(this.con.receiver.createStream(member, { mode: 'pcm', end: 'manual' }), member);
         console.log('hi ' + member.displayName);
+        this.audio.set(member.user.id, ret);
     }
 
     removeAudioUser(member) {
-        ParserManager.remove(member);
+        let audio = this.audio.get(member.user.id);
+
+        if (audio) {
+            audio.free();
+            this.audio.delete(member.user.id);
+            console.log('bye ' + member.displayName);
+        }
     }
 
     async startParser(channel) {
         if (!(await this.getCon(channel))) {
+            return;
+        }
+        if (this.audio.size) {
             return;
         }
         console.log('startParser')

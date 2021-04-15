@@ -1,6 +1,7 @@
 const os = require('os');
 const { fork } = require('child_process');
 const { Collection } = require('discord.js');
+const { copyFileSync } = require('fs');
 
 module.exports.ParserManager = new class {
     constructor() {
@@ -12,9 +13,9 @@ module.exports.ParserManager = new class {
     addProcess() {
         console.log(this.process.size);
         if (this.process.size < 2) {
-            let proc = fork('./class/UserAudioParser');
+            let proc = fork('./class/Parser.js');
             proc.on('error', (err) => {
-                console.log(err);
+                console.log('err', err);
             });
             proc.on('message', (message) => {
                 if (message.type === 'ready') {
@@ -27,15 +28,23 @@ module.exports.ParserManager = new class {
         }
     }
 
+    parse(chunk, member) {
+        let proc = this.users.get(member);
+        if (!proc) {
+            return;
+        }
+        proc.send({type:'parse', chunk:chunk, user:member.user.id});
+    }
+
     handleMessage(message) {
         if (message.type === "text") {
-            this.ontext(message.text);
+            this.ontext(message.text, message.user, message.guild);
         }
 
     }
 
-    add(con, id) {
-        if (this.users.has(id)) {
+    add(member) {
+        if (this.users.has(member)) {
             return;
         }
         let smallest = this.process.reduce((ret, val, key)=>{
@@ -45,12 +54,11 @@ module.exports.ParserManager = new class {
             if (ret[0] > val) {
                 return [val, key];
             }
+            return ret;
         }, null);
-        console.log(con);
-        console.log(con.sockets.ws, con.sockets.idp)
-        smallest[1].send({type:'add', audio:audio, user:id.user.id});
-        this.process.set(smallest[1], smallest[0] + 1);
-        this.users.set(id, smallest[1]);
+        smallest[1].send({type:'add', user:member.user.id, guild:member.guild.id});
+        this.process.set(smallest[1], this.process.get(smallest[1]) + 1);
+        this.users.set(member, smallest[1]);
     }
 
     sweep(guild) {
