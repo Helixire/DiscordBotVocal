@@ -28,6 +28,26 @@ const embedMeme = async (offset) => {
     });
 }
 
+const embedMemeInfo = (meme) => {
+    var lastCall = 'never played';
+    if (meme.last_call) {
+        var date = new Date(null);
+        date.setSeconds(meme.last_call);
+        lastCall = date.toISOString().replace(/T/, '\n').replace(/\..+/, '');
+    }
+    return [new MessageEmbed()
+        .setTitle(meme.cmd)
+        .setColor('#fed42d')
+        .addField('Last call', lastCall, true)
+        .addField('Played', meme.number_played, true),
+    {
+        files: [{
+            attachment: meme.path,
+            name: meme.cmd + '.mp3'
+        }]
+    }]
+}
+
 ConnectionList.ontext = (text, parser) => {
     console.log(text);
     db.get(`SELECT
@@ -97,9 +117,9 @@ client.on('message', async message => {
         console.log('Start download ' + param[1]);
         download(param[2], fileName, async () => {
             let meme = await MemeTable.find(new Comparaison(
-                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and',
                 new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
-                );
+            );
             if (meme.id) {
                 fs.unlink(meme.path, (error) => {
                     if (error) {
@@ -125,9 +145,9 @@ client.on('message', async message => {
         // Only try to join the sender's voice channel if they are in one themselves
         if (message.member.voice.channel) {
             let meme = await MemeTable.find(new Comparaison(
-                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+                new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and',
                 new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
-                );
+            );
             if (!meme.id) {
                 message.channel.send('Tasukete kure comando inconnue !');
                 return;
@@ -141,9 +161,9 @@ client.on('message', async message => {
         ConnectionList.disconnect(message.guild.id);
     } else if (param[0] == config.prefix + 'link' && param[1] && param[2]) {
         let meme = await MemeTable.find(new Comparaison(
-            new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and', 
+            new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and',
             new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
-            );
+        );
         if (!meme.id) {
             message.channel.send('Baka Aniki ! Commande not found !');
             return;
@@ -188,6 +208,42 @@ client.on('message', async message => {
                 newMessage.delete();
             });
         });
+    }
+    else if (param[0] == config.prefix + 'info' && param[1]) {
+        MemeTable.find(new Comparaison(
+            new Comparaison(MemeTable.fields.get('cmd'), '=', param[1]), 'and',
+            new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()))
+        ).then((meme) => {
+            if (!meme.id) {
+                message.channel.send('Baka Aniki ! Commande not found !');
+                return;
+            }
+            let listInfo = embedMemeInfo(meme)
+            message.channel.send(listInfo[0]).then(async (infoMessage) => {
+                infoMessage.react('❌');
+                let delmsgAudio = await message.channel.send(listInfo[1]);
+                const infoFilter = (reaction, user) => {
+                    return (reaction.emoji.name === '❌' && user.id === message.author.id)
+                };
+                const infoCollector = infoMessage.createReactionCollector(infoFilter, { idle: 300000 });
+                infoCollector.on('collect', (reaction, user) => {
+                    if (reaction.emoji.name === '❌') {
+                        meme.delete();
+                        infoMessage.delete();
+                        delmsgAudio.delete();
+
+                        message.channel.send('I DID IT ONII-CHAN MEME IS DELETED');
+                    }
+                })
+                infoCollector.on('end', collected => {
+                    infoMessage.delete();
+                    delmsgAudio.delete();
+
+                })
+            });
+        });
+
+
     }
 });
 
