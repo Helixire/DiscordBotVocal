@@ -146,6 +146,14 @@ module.exports.Table = class {
         return ret;
     }
 
+    count(comparaison) {
+        return db.getP(`
+        SELECT count(*) AS c
+        FROM ${this.name}
+        ${(comparaison) ? ` WHERE ${comparaison.toString()}` : ''}
+        `, comparaison && comparaison.param || []).then((row)=>{return row.c});
+    }
+
     delete(id) {
         return db.runP(`DELETE FROM ${this.name} WHERE ID = ?`, [id]);
     }
