@@ -180,10 +180,11 @@ client.on('message', async message => {
         });
     } else if (param[0] == config.prefix + 'list') {
         let offset = 0;
-        message.channel.send(await embedMeme(offset)).then(newMessage => {
-            newMessage.react('⬅️')
-                .then(() => { newMessage.react('➡️') });
-
+        message.channel.send(await embedMeme(offset)).then(async (newMessage) => {
+            let count = await MemeTable.count(new Comparaison(MemeTable.fields.get('server'), '=', message.guild.id.toString()));
+            if ((count / 10) > 1) {
+                newMessage.react('➡️');
+            }
             const colector = newMessage.createReactionCollector((reaction, user) => {
                 return (reaction.emoji.name === '⬅️' || reaction.emoji.name === '➡️') && user.id === message.author.id;
             }, { idle: 300000 });
@@ -191,7 +192,7 @@ client.on('message', async message => {
             colector.on('collect', (reaction, user) => {
                 if (reaction.emoji.name === '⬅️') {
                     offset -= 10;
-                } else if (reaction.emoji.name === '➡️') {
+                } else if (reaction.emoji.name === '➡️') {//gestion si last page
                     offset += 10;
                 }
                 if (offset < 0) {
@@ -199,8 +200,17 @@ client.on('message', async message => {
                 } // TODO if offset too big
                 embedMeme(offset).then(embed => newMessage.edit(embed).then(() => {
                     newMessage.reactions.removeAll()
-                    newMessage.react('⬅️')
-                        .then(() => { newMessage.react('➡️') });
+                    if (offset != 0) {
+                        newMessage.react('⬅️')
+                            .then(() => {
+                                if ((offset + 10) < count) {
+                                    newMessage.react('➡️');
+                                }
+                            });
+                    }
+                    if (offset == 0) {
+                        newMessage.react('➡️');
+                    }
                 }));
             });
 
