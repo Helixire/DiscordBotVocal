@@ -1,6 +1,5 @@
-const { db } = require('./db');
-const { Field } = require('./Field');
-const { Table, Row } = require('./Table');
+const { Field } = require('./DbAccess/Field');
+const { Table, Row } = require('./DbAccess/Table');
 const { ConnectionList } = require('./ConnectionList');
 const { Collection } = require('discord.js');
 
@@ -16,7 +15,7 @@ const Meme = class extends Row {
             if (played) {
                 this.last_call = Math.floor(Date.now() / 1000);
                 this.number_played += 1;
-                this.update();
+                this.save();
             }
         }
     }

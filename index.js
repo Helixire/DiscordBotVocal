@@ -6,11 +6,10 @@ const { Client, Intents, MessageEmbed } = require('discord.js');
 const path = require('path');
 const { ConnectionList } = require('./class/ConnectionList');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
-const { db } = require('./class/db');
+const { db } = require('./class/DbAccess/db');
 const { MemeTable } = require('./class/Meme');
-const { Comparaison } = require('./class/Comparaison');
-
-db.run("CREATE TABLE IF NOT EXISTS MEME_TRIGER(ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ID_SONG INTEGER NOT NULL, TRIGER TEXT NOT NULL);")
+const { Comparaison } = require('./class/DbAccess/Comparaison');
+const { TrigerTable } = require('./class/Trigger');
 
 const download = (url, path, callback) => {
     request.head(url, (err, res, body) => {
@@ -108,7 +107,7 @@ client.on('message', async message => {
                     }
                 });
                 meme.path = fileName;
-                meme.update().then(() => {
+                meme.save().then(() => {
                     message.channel.send('I DID IT ONII-CHAN COMMAND UPDATED');
                 });
             }
@@ -116,7 +115,7 @@ client.on('message', async message => {
                 meme.path = fileName;
                 meme.cmd = param[1];
                 meme.server = message.guild.id.toString();
-                meme.update().then(() => {
+                meme.save().then(() => {
                     message.channel.send('I DID IT ONII-CHAN');
                 });
             }
