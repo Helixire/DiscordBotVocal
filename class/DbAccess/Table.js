@@ -1,14 +1,44 @@
 const { db } = require('./db');
 const { Comparaison } = require('./Comparaison');
 const { Field } = require('./Field');
+const { Collection } = require('discord.js');
 
 const Row = class {
     constructor(table) {
         this.table = table;
+        this.modified = new Collection();
+        this.table.fields.forEach((field, key) => {
+            if (key == 'id') {
+                return;
+            }
+            Object.defineProperty(this, key, {
+                get : function () {return this['_' + field.name];},
+                set : function (value) {
+                    if (this['_' + field.name] != value) {
+                        this.modified.set(key, true);
+                        this['_' + field.name] = value;
+                    }
+                }
+              });
+        });
+        Object.defineProperty(this, 'id', {
+            get : function () {return this['_id'];},
+            set : function (v) {console.trace("NO don't change id directly");}
+        });
+
+        this.table.links.forEach((link) => {
+            this[link.name] = ()=>{
+                return link.getter(this);
+            }
+        })
     }
 
-    update() {
-        return this.table.update(this);
+    save() {
+        return this.table.save(this);
+    }
+
+    delete() {
+        return this.table.delete(this.id);
     }
 }
 
@@ -17,9 +47,10 @@ module.exports.Row = Row;
 module.exports.Table = class {
     constructor(name, fields, rowtype) {
         this.name = name;
+        this.links = [];
         this.fields = fields;
         this.fields.set('id', new Field('ID', 'INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL', {isId:true}));
-        this.fields.forEach(field=>field.table = this);
+        this.fields.forEach(field=>field.init(this));
         this.rowconstruct = rowtype || Row;
         this.init();
     }
@@ -27,7 +58,9 @@ module.exports.Table = class {
     init() {
         let ret = [];
         for (let field of this.fields.values()) {
-            ret.push(field.addString());
+            if (!field.isVirtual) {
+                ret.push(field.addString());
+            }
         }
         db.run(
             `
@@ -43,7 +76,7 @@ module.exports.Table = class {
                 console.log('error finding column');
             }
             this.fields.forEach((field) => {
-                if (rows.find((elem) => { return elem.name == field.name })) {
+                if (field.isVirtual || rows.find((elem) => { return elem.name == field.name })) {
                     return;
                 }
                 db.run(`ALTER TABLE ${this.name} ADD ${field.addString()}`);
@@ -75,18 +108,24 @@ module.exports.Table = class {
             });
     }
 
-    update(row) {
+    save(row) {
         if (!row.id) {
             return this.insert(row);
         }
 
         let cmp = new Comparaison();
         this.fields.forEach((v, k) => {
-            if (k != 'id') {
+            if (row.modified.get(k)) {
                 cmp = new Comparaison(cmp, ',', new Comparaison(v, '=', row[k], {noTable:true}), {noPretensies:true});
             }
         });
-        return db.runP(`UPDATE ${this.name} SET ${cmp.toString()} WHERE ID = ?`, [...cmp.param, row.id]); // TODO Gestion d'erreur
+        if (!cmp.toString()) {
+            return Promise.resolve(row);
+        }
+        return db.runP(`UPDATE ${this.name} SET ${cmp.toString()} WHERE ID = ?`, [...cmp.param, row.id]).then(()=>{
+            row.modified.clear();
+            return row;
+        }); // TODO Gestion d'erreur
     }
 
     newRow() {
@@ -97,23 +136,31 @@ module.exports.Table = class {
         let ret = this.newRow();
         if (row) {
             this.fields.forEach((field, key) => {
+                if (key == 'id') {
+                    ret._id = row[field.name];
+                    return;
+                }
                 ret[key] = row[field.name];
             });
         }
         return ret;
     }
 
+    delete(id) {
+        return db.runP(`DELETE FROM ${this.name} WHERE ID = ?`, [id]);
+    }
+
     insert(row) {
         let fieldsName = [];
         let param = [];
         this.fields.forEach((v, k) => {
-            if (k != 'id') {
+            if (k != 'id' && !v.isVirtual) {
                 param.push(row[k]);
                 fieldsName.push(v.name);
             }
         });
         return db.runP(`INSERT INTO ${this.name} (${fieldsName.join(',')}) VALUES (${Array.from('?'.repeat(this.fields.size - 1)).join(',')})`, param).then(obj => {
-            row.id = obj.lastID;
+            row._id = obj.lastID;
         });
     }
 }
