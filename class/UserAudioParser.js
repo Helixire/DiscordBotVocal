@@ -1,4 +1,3 @@
-const { Mixer } = require('audio-mixer');
 const { ParserManager } = require('./ParserManager');
 
 module.exports.
@@ -8,21 +7,10 @@ UserAudioParser = class {
         this.audio = audio;
         this.member = member;
         this.parsing = true;
-        this.mixer = new Mixer({
-            channels: 1,
-            bitDepth: 16,
-            sampleRate: 48000,
-        });
-        this.discordInput = this.mixer.input({
-            channels: 2,
-            bitDepth: 16,
-            sampleRate: 48000,
-        });
 
-        this.mixer.on('data', (chunk)=> {
-            ParserManager.parse(chunk, this.member);
-        })
-        this.audio.pipe(this.discordInput);
+        this.audio.on('readable', (chunk)=> {
+            ParserManager.parse(this.audio.read(), this.member);
+        });
     }
 
     setParsing(parse) {

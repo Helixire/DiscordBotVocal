@@ -33,6 +33,7 @@ const embedMeme = async (offset) => {
 }
 
 ParserManager.ontext = (text, userid, guildid) => {
+    console.log(text);
     db.get(`SELECT
                 MEME_SONG.ID,
                 MEME_TRIGER.TRIGER

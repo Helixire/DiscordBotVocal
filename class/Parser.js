@@ -13,11 +13,16 @@ let UserParser = class {
     }
 
     parse(chunk) {
+        let chunkMono = Buffer.alloc(chunk.length / 2);
+
+        for (let i = 0; i < chunkMono.length; ++i) {
+            chunkMono[i] = chunk[i * 2] / 2 + chunk[i * 2 + 1] / 2;
+        }
         // if (!this.parsing) {
         //     return;
         // }
         this.parsers.forEach((rec) =>{
-            rec.acceptWaveform(chunk);
+            rec.acceptWaveform(chunkMono);
         })
         let empty = 0;
         for (let i = 0; i < chunk.length; i++) {
@@ -30,17 +35,22 @@ let UserParser = class {
             this.parsers.forEach((rec) =>{
                 let a  = rec.finalResult();
                 if (a.text) {
-                    process.send({type:'text', text:a, user:this.user, guild:this.guild});
+                    process.send({type:'text', text:a.text, user:this.user, guild:this.guild});
                 }
             });
         }
+    }
+
+    free() {
+        this.parsers.forEach((parser) => {
+            parser.free();
+        })
     }
 }
 
 const users = new Collection();
 
 process.on('message', (msg)=>{
-    console.log('msg', msg);
     if (msg.type === 'add') {
         users.set(msg.user, new UserParser(msg.user, msg.guild));
     }
@@ -52,7 +62,7 @@ process.on('message', (msg)=>{
         }
     }
     else if (msg.type === 'parse') {
-        users.get(msg.user).parse(msg.chunk);
+        users.get(msg.user).parse(msg.chunk.data);
     }
 });
 

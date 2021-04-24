@@ -1,7 +1,5 @@
-const os = require('os');
 const { fork } = require('child_process');
 const { Collection } = require('discord.js');
-const { copyFileSync } = require('fs');
 
 module.exports.ParserManager = new class {
     constructor() {
@@ -16,6 +14,7 @@ module.exports.ParserManager = new class {
             let proc = fork('./class/Parser.js');
             proc.on('error', (err) => {
                 console.log('err', err);
+                process.exit(1);
             });
             proc.on('message', (message) => {
                 if (message.type === 'ready') {
