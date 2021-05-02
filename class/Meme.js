@@ -9,6 +9,9 @@ const Meme = class extends Row {
     }
 
     async play(chanel) {
+        if (!this.last_call) {
+            this.last_call = 0;
+        }
         if (Math.floor(Date.now() / 1000) - this.last_call >= 100) {
             console.log('Start playing ' + this.cmd);
             let played = await ConnectionList.getConnection(this.server).playSound(this.path, chanel);
