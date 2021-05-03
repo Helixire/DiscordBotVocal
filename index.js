@@ -48,7 +48,8 @@ const embedMemeInfo = (meme) => {
     }]
 }
 
-ConnectionList.ontext = (text, parser) => {
+ConnectionList.ontext = (data) => {
+    let text = data.result.filter(word => word.conf > 0.5).map(v=>v.word).join(' ');
     console.log(text);
     db.get(`SELECT
                 MEME_SONG.ID,
@@ -59,17 +60,17 @@ ConnectionList.ontext = (text, parser) => {
             WHERE ?1 LIKE '% ' || MEME_TRIGER.TRIGER || ' %'
                 OR ?1 LIKE '% ' || MEME_TRIGER.TRIGER
                 OR ?1 LIKE MEME_TRIGER.TRIGER || ' %'
-                OR ?1 LIKE MEME_TRIGER.TRIGER`, text, async (err, row) => {
+                OR ?1 LIKE MEME_TRIGER.TRIGER`, text, (err, row) => {
         if (err) {
             console.log('select ' + err);
         }
         if (row) {
-            parser.str += text.length;
-            let meme = await MemeTable.get(row.ID);
-            console.log('---TRIGERR---');
-            console.log(row.TRIGER);
-            console.log(text);
-            meme.play();
+            MemeTable.get(row.ID).then(meme => {
+                console.log('---TRIGERR---');
+                console.log(row.TRIGER);
+                console.log(data);
+                meme.play();
+            });
         }
     });
 }
