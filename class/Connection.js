@@ -1,71 +1,13 @@
 const { UserAudioParser } = require('./UserAudioParser');
 const { Collection } = require('discord.js');
-const { Mixer } = require('audio-mixer');
-const config = require('../config.json');
-const vosk = require('vosk');
-
-const models = config.models.map(path => new vosk.Model(path));
-
 
 module.exports.Connection = class {
     constructor() {
         this.audio = new Collection();
-        this.parsers = models.map(model => {return {parser:new vosk.Recognizer({ model: model, sampleRate: 48000.0 }), str:0}});
         this.con = null
-        this.onText = null;
         this.playing = false;
         this.listening = false;
         this.parsing = true;
-        this.mixer = new Mixer({
-            channels: 1,
-            bitDepth: 16,
-            sampleRate: 48000,
-        });
-        this.mixer.on('data', chunk=>this.parsepacket(chunk));
-    }
-
-    nth_ocurrence(str, needle, nth) {
-        for (let i=str.length;i>0;i--) {
-          if (str.charAt(i) == needle) {
-              if (!--nth) {
-                 return i;    
-              }
-          }
-        }
-        return false;
-      }
-
-    parsepacket(chunk) {
-        if (!this.parsing) {
-            return;
-        }
-        this.parsers.forEach((rec) =>{
-            rec.parser.acceptWaveform(chunk);
-            let a = rec.parser.partialResult();
-            if (a.partial) {
-                a = a.partial.substring(rec.str, this.nth_ocurrence(a.partial, ' ', 3));
-                if (a) {
-                    this.ontext(a, rec);
-                    console.log(a);
-                }
-            }
-        })
-        let empty = 0;
-        for (let i = 0; i < chunk.length; i++) {
-            if (chunk[i]) {
-                empty = 0;
-            }
-            ++empty;
-        }
-        if (empty > 100) {
-            this.parsers.forEach((rec) =>{
-                let a  = rec.parser.finalResult();
-                if (a.text) {
-                    this.ontext(a.text, rec);
-                    rec.str = 0;
-                }
-            });
-        }
     }
 
     clean() {
@@ -127,7 +69,7 @@ module.exports.Connection = class {
         if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
             return;
         }
-        let ret = new UserAudioParser(this.con.receiver.createStream(member, { mode: 'pcm', end: 'manual' }), this.mixer);
+        let ret = new UserAudioParser(this.con.receiver.createStream(member, { mode: 'pcm', end: 'manual' }), this.ontext);
         console.log('hi ' + member.displayName);
         this.audio.set(member.user.id, ret);
     }
