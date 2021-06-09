@@ -11,6 +11,7 @@ const { MemeTable } = require('./class/Meme');
 const { Comparaison } = require('./class/DbAccess/Comparaison');
 const { TrigerTable } = require('./class/Trigger');
 
+
 const download = (url, path, callback) => {
     request.head(url, (err, res, body) => {
         request(url)

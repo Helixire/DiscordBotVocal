@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Sound {
+  id            Int      @id @default(autoincrement())
+  path          String   @unique
+  cmd           String
+  server        String
+  last_call     DateTime?
+  number_played Int      @default(0)
+  trigers       Triger[]
+
+  @@unique([cmd, server])
+}
+
+model Triger {
+  id     Int     @id @default(autoincrement())
+  triger String  @unique
+  sound  Sound[]
+}
