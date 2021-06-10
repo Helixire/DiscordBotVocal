@@ -2,9 +2,13 @@
   "name": "discord-bot-vocal",
   "version": "1.0.0",
   "description": "DiscordBotVocal",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
+    "build": "tsc --project ./",
+    "dev": "ts-node ./src/index.ts",
+    "prod": "node ./build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "npx prisma migrate deploy",
     "deploy": "env $(cat .env | grep -v \"#\" | xargs) pm2 deploy ecosystem.config.js production update --force"
   },
   "repository": {
@@ -20,6 +24,7 @@
   "homepage": "https://github.com/sauvag-c/DiscordBotVocal#readme",
   "dependencies": {
     "@discordjs/opus": "^0.5.0",
+    "@prisma/client": "^2.24.1",
     "audio-mixer": "^2.1.4",
     "discord.js": "^12.5.3",
     "dotenv": "^8.2.0",
@@ -27,6 +32,12 @@
     "ffmpeg-static": "^4.3.0",
     "nanoid": "^3.1.22",
     "sqlite3": "^5.0.2",
+    "ts-node": "^10.0.0",
+    "typescript": "^4.3.2",
     "vosk": "^0.3.24"
+  },
+  "devDependencies": {
+    "@types/ws": "^7.4.4",
+    "prisma": "^2.24.1"
   }
 }

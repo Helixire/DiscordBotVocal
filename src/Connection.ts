@@ -1,14 +1,13 @@
-const { UserAudioParser } = require('./UserAudioParser');
-const { Collection } = require('discord.js');
+import { GuildMember, Snowflake, VoiceChannel, VoiceConnection } from 'discord.js';
+import { UserAudioParser } from './UserAudioParser'
 
-module.exports.Connection = class {
-    constructor() {
-        this.audio = new Collection();
-        this.con = null
-        this.playing = false;
-        this.listening = false;
-        this.parsing = true;
-    }
+export class Connection {
+    audio: Map<Snowflake, UserAudioParser> = new Map<Snowflake, UserAudioParser>();
+    con: VoiceConnection | null = null;
+    playing: boolean = false;
+    listening: boolean = false;
+    parsing: boolean = true;
+    ontext: ((data:any)=>void) | null = null;
 
     clean() {
         this.listening = false;
@@ -26,8 +25,8 @@ module.exports.Connection = class {
         }
     }
 
-    async playSound(path, channel) {
-        if (this.playing) {
+    async playSound(path: string, channel?: VoiceChannel) {
+        if (this.playing || !this.con) {
             return false;
         }
         if (!(await this.getCon(channel))) {
@@ -37,7 +36,7 @@ module.exports.Connection = class {
         this.parsing = false;
         const dispatcher = this.con.play(path);
         dispatcher.on('finish', () => {
-            console.log('Finished playing!');
+            console.log('Finished playing !');
             this.playing = false;
             this.parsing = true;
             dispatcher.destroy();
@@ -48,7 +47,7 @@ module.exports.Connection = class {
         return true;
     }
 
-    async getCon(channel) {
+    async getCon(channel?: VoiceChannel) {
         if (!this.con) {
             if (!channel) {
                 console.log('connard pas de con ni channel');
@@ -60,13 +59,12 @@ module.exports.Connection = class {
         if (channel && this.con.channel.id != channel.id) {
             this.clean();
             let n = await channel.join();
-            console.log(this.con.id, n.id);
         }
         return this.con;
     }
 
-    addAudioUser(member) {
-        if (!this.listening || member.user.bot || this.audio.has(member.user.id)) {
+    addAudioUser(member: GuildMember) {
+        if (!this.listening || member.user.bot || this.audio.has(member.user.id) || !this.con) {
             return;
         }
         let ret = new UserAudioParser(this.con.receiver.createStream(member, { mode: 'pcm', end: 'manual' }), this.ontext);
@@ -74,7 +72,7 @@ module.exports.Connection = class {
         this.audio.set(member.user.id, ret);
     }
 
-    removeAudioUser(member) {
+    removeAudioUser(member: GuildMember) {
         let audio = this.audio.get(member.user.id);
 
         if (audio) {
@@ -84,8 +82,8 @@ module.exports.Connection = class {
         }
     }
 
-    async startParser(channel) {
-        if (!(await this.getCon(channel))) {
+    async startParser(channel: VoiceChannel) {
+        if (!(await this.getCon(channel)) || !this.con) {
             return;
         }
         if (this.audio.size) {

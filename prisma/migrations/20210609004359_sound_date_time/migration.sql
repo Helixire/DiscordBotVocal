@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Sound" ALTER COLUMN "last_call" DROP NOT NULL,
+ALTER COLUMN "last_call" DROP DEFAULT;
