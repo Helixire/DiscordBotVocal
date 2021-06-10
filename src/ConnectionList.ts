@@ -1,4 +1,3 @@
-import { Guild } from 'discord.js';
 import { Connection } from './Connection';
 
 const ConnectionList = new class {

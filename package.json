@@ -2,11 +2,13 @@
   "name": "discord-bot-vocal",
   "version": "1.0.0",
   "description": "DiscordBotVocal",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "scripts": {
     "build": "tsc --project ./",
-    "dev": "ts-node index.ts",
+    "dev": "ts-node ./src/index.ts",
+    "prod": "node ./build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "npx prisma migrate deploy",
     "deploy": "env $(cat .env | grep -v \"#\" | xargs) pm2 deploy ecosystem.config.js production update --force"
   },
   "repository": {
@@ -35,6 +37,7 @@
     "vosk": "^0.3.24"
   },
   "devDependencies": {
+    "@types/ws": "^7.4.4",
     "prisma": "^2.24.1"
   }
 }

@@ -1,10 +1,10 @@
 import nanoid from 'nanoid';
-const config = require('./config.json');
+const config = require('../config.json');
 import fs from 'fs';
 const request = require('request');
-import { Channel, Client, Intents, Message, MessageEmbed, Snowflake, VoiceChannel, VoiceState } from 'discord.js';
+import { Client, Message, MessageEmbed, VoiceChannel, VoiceState } from 'discord.js';
 import path from 'path';
-import { ConnectionList } from './class/ConnectionList';
+import { ConnectionList } from './ConnectionList';
 //{ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] }
 import { PrismaClient, Sound } from '@prisma/client'
 
