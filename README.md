@@ -9,6 +9,7 @@ getting started:
 - copy configExample.json to config.json
 - modify config.json to your needs
 - create a file .env with your database url connection inside
+- npx prisma migrate
 - npm run dev
 
 config.js :
