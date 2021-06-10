@@ -2,6 +2,7 @@ DiscordBotVocal
 
 Requierment:
 - node
+- postgres
 
 getting started:
 - npm install
