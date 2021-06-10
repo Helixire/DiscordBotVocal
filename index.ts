@@ -1,14 +1,15 @@
-const nanoid = require('nanoid');
+import nanoid from 'nanoid';
 const config = require('./config.json');
-const fs = require('fs');
+import fs from 'fs';
 const request = require('request');
-const { Client, Intents, MessageEmbed } = require('discord.js');
-const path = require('path');
-const { ConnectionList } = require('./class/ConnectionList');
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] });
-import { PrismaClient } from '@prisma/client'
+import { Channel, Client, Intents, Message, MessageEmbed, Snowflake, VoiceChannel, VoiceState } from 'discord.js';
+import path from 'path';
+import { ConnectionList } from './class/ConnectionList';
+//{ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] }
+import { PrismaClient, Sound } from '@prisma/client'
 
 
+const client = new Client();
 const prisma = new PrismaClient()
 
 
@@ -32,7 +33,7 @@ const embedMeme = async (offset: number) => {
     });
 }
 
-const embedMemeInfo = (meme: any) => {
+const embedMemeInfo = (meme: Sound) => {
     var lastCall = 'never played';
     if (meme.last_call) {
         lastCall = meme.last_call.toISOString().replace(/T/, '\n').replace(/\..+/, '');
@@ -50,18 +51,19 @@ const embedMemeInfo = (meme: any) => {
     }]
 }
 
-const play = async function (sound: any, chanel?: any) {
+const play = async function (sound: Sound, chanel?: VoiceChannel) {
+    
     if (!sound.last_call) {
-        sound.last_call = 0;
+        sound.last_call = new Date(0);
     }
 
     if (Date.now() - sound.last_call.getTime() >= 100000) {
         console.log('Start playing ' + sound.cmd);
         let played = await ConnectionList.getConnection(sound.server).playSound(sound.path, chanel);
         if (played) {
-            prisma.sound.update({
+            await prisma.sound.update({
                 data: {
-                    last_call: Date(),
+                    last_call: new Date(),
                     number_played : {
                         increment: 1
                     }
@@ -70,62 +72,49 @@ const play = async function (sound: any, chanel?: any) {
                     id: sound.id
                 }
             })
+        } else {
+            console.log('Cancel playing ' + sound.cmd);
         }
+    } else {
+        console.log('Cancel playing ' + sound.cmd);
     }
 }
 
-ConnectionList.ontext = (data: any) => {
-    let text = data.result.filter((word: any) => word.conf > 0.5).map((v: any) =>v.word).join(' ');
-    console.log(text);
-    prisma.sound.findFirst({
-        where: {
-            OR: [
-                {
-                    trigers: {
-                        some: {
-                            triger: text
-                        }
-                    }
-                },
-                {
-                    trigers: {
-                        some: {
-                            triger : {
-                                contains: text + ' '
-                            }
-                        }
-                    }
-                },
-                {
-                    trigers: {
-                        some: {
-                            triger : {
-                                contains: ' ' + text + ' '
-                            }
-                        }
-                    }
-                },
-                {
-                    trigers: {
-                        some: {
-                            triger : {
-                                contains: ' ' + text
-                            }
-                        }
-                    }
-                },
-            ]
-        }
-    }).then((row: any) => {
-        console.dir(row, { depth: null })
-        if (row) {
-            play(row)
-        }
-    });
+ConnectionList.ontext = async (data: any) => {
+    const text = data.result.filter((word: any) => word.conf > 0.5).map((v: any) =>v.word).join(' ');
+    if (!text) {
+        return;
+    }
+    console.log("Search : " + text);
+    const row = await prisma.$queryRaw(`
+        SELECT
+            s.id,
+            s.path,
+            s.cmd,
+            s.server,
+            s.last_call,
+            s.number_played,
+            t.triger
+        FROM "Sound" as s
+        INNER JOIN "_SoundToTriger" as st ON (s.id = st."A")
+        INNER JOIN "Triger" as t ON (st."B" = t.id)
+        WHERE $1 LIKE '% ' || t.triger || ' %'
+            OR $1 LIKE '% ' || t.triger
+            OR $1 LIKE t.triger || ' %'
+            OR $1 LIKE t.triger`, text)
+    if (row[0]) {
+        console.dir(row[0], { depth: null })
+        row[0].last_call = new Date(row[0].last_call);
+        play(row[0] as Sound);
+    }
 }
 
 //Gestion des co et deco des utilisateur vocaux
-client.on('voiceStateUpdate', (oldState: any, newState: any) => {
+client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
+    if (!client.user || !newState.member || !oldState.member) {
+        return;
+    }
+
     let connection = ConnectionList.getConnection(oldState.guild.id);
 
     if (!connection.con) {
@@ -134,7 +123,7 @@ client.on('voiceStateUpdate', (oldState: any, newState: any) => {
 
     // Si l'utilisateur a changer de channel
     if (oldState.channelID != newState.channelID) {
-        if (oldState.channelID && newState.channelID && newState.member.user.id == client.user.id) { // If moove BOT manualy
+        if (oldState.channelID && newState.channelID && newState.member.user.id == client.user.id && newState.channel) { // If moove BOT manualy
             connection.startParser(newState.channel);
         }
         else if (oldState.channelID == connection.con.channel.id) { //Deco
@@ -147,7 +136,11 @@ client.on('voiceStateUpdate', (oldState: any, newState: any) => {
 });
 
 // Gestion des messages
-client.on('message', async (message: any) => {
+client.on('message', async (message: Message) => {
+    if (!message.member) {
+        return;
+    }
+
     try {
     let param = message.content.split(' ');
     //if talk directly to onii-chan he don't crash
@@ -167,6 +160,10 @@ client.on('message', async (message: any) => {
         }
         console.log('Start download ' + param[1]);
         download(param[2], fileName, async () => {
+            if (!message.guild) {
+                console.log('WTF guild disapeared on download');
+                return;
+            }
             await prisma.sound.upsert({
                 create: {
                     cmd: param[1],
@@ -248,33 +245,32 @@ client.on('message', async (message: any) => {
         message.channel.send("Link connected !");
     } else if (param[0] == config.prefix + 'list') {
         let offset = 0;
-        message.channel.send(await embedMeme(offset)).then((newMessage: any) => {
-            newMessage.react('⬅️')
-                .then(() => { newMessage.react('➡️') });
+        const newMessage = await message.channel.send(await embedMeme(offset));
+        newMessage.react('⬅️')
+            .then(() => { newMessage.react('➡️') });
 
-            const colector = newMessage.createReactionCollector((reaction: any, user: any) => {
-                return (reaction.emoji.name === '⬅️' || reaction.emoji.name === '➡️') && user.id === message.author.id;
-            }, { idle: 300000 });
+        const colector = newMessage.createReactionCollector((reaction, user) => {
+            return (reaction.emoji.name === '⬅️' || reaction.emoji.name === '➡️') && user.id === message.author.id;
+        }, { idle: 300000 });
 
-            colector.on('collect', (reaction: any, user: any) => {
-                if (reaction.emoji.name === '⬅️') {
-                    offset -= 10;
-                } else if (reaction.emoji.name === '➡️') {
-                    offset += 10;
-                }
-                if (offset < 0) {
-                    offset = 0;
-                } // TODO if offset too big
-                embedMeme(offset).then((embed: any) => newMessage.edit(embed).then(() => {
-                    newMessage.reactions.removeAll()
-                    newMessage.react('⬅️')
-                        .then(() => { newMessage.react('➡️') });
-                }));
-            });
+        colector.on('collect', async (reaction) => {
+            if (reaction.emoji.name === '⬅️') {
+                offset -= 10;
+            } else if (reaction.emoji.name === '➡️') {
+                offset += 10;
+            }
+            if (offset < 0) {
+                offset = 0;
+            } // TODO if offset too big
+            let embed = await embedMeme(offset)
+            await newMessage.edit(embed)
+            await newMessage.reactions.removeAll()
+            await newMessage.react('⬅️')
+            newMessage.react('➡️')
+        });
 
-            colector.on('end', (collected: any) => {
-                newMessage.delete();
-            });
+        colector.on('end', () => {
+            newMessage.delete();
         });
     }
     else if (param[0] == config.prefix + 'info' && param[1]) {
@@ -294,19 +290,19 @@ client.on('message', async (message: any) => {
         let infoMessage = await message.channel.send(listInfo[0]);
         infoMessage.react('❌');
         let delmsgAudio = await message.channel.send(listInfo[1]);
-        const infoCollector = infoMessage.createReactionCollector((reaction: any, user: any) => {
+        const infoCollector = infoMessage.createReactionCollector((reaction, user) => {
             return (reaction.emoji.name === '❌' && user.id === message.author.id)
         }, { idle: 300000 });
-        infoCollector.on('collect', (reaction: any, user: any) => {
+        infoCollector.on('collect', async (reaction) => {
             if (reaction.emoji.name === '❌') {
-                prisma.sound.delete({where:{id:meme.id}});
+                await prisma.sound.delete({where:{id:meme.id}});
                 infoMessage.delete();
                 delmsgAudio.delete();
 
                 message.channel.send('I DID IT ONII-CHAN MEME IS DELETED');
             }
         })
-        infoCollector.on('end', (collected: any)=> {
+        infoCollector.on('end', ()=> {
             infoMessage.delete();
             delmsgAudio.delete();
         })

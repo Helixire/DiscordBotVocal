@@ -1,13 +1,11 @@
-const { Connection } = require('./Connection');
-const { Collection } = require('discord.js');
+import { Guild } from 'discord.js';
+import { Connection } from './Connection';
 
-module.exports.ConnectionList = new class {
-    constructor() {
-        this.connections = new Collection();
-        this.ontext = null;
-    }
+const ConnectionList = new class {
+    connections: Map<string, Connection> = new Map<string, Connection>();
+    ontext: ((data:any)=>void) | null = null;
 
-    getConnection(guild) {
+    getConnection(guild: string) {
         let ret = this.connections.get(guild);
         if (!ret) {
             ret = new Connection();
@@ -17,7 +15,7 @@ module.exports.ConnectionList = new class {
         return ret;
     }
     
-    disconnect(guild) {
+    disconnect(guild: string) {
         let connection = this.connections.get(guild);
         if (connection) {
             connection.disconnect();
@@ -25,3 +23,5 @@ module.exports.ConnectionList = new class {
         }
     }
 }
+
+export { ConnectionList }
