@@ -14,7 +14,7 @@ module.exports = {
       repo : 'https://github.com/sauvag-c/DiscordBotVocal.git',
       path : process.env.SERVER_PATH,
       'pre-deploy-local': '',
-      'post-deploy' : 'npm install && npx prisma migrate deploy && pm2 reload ecosystem.config.js --env production',
+      'post-deploy' : 'npm install && npm run build && npx prisma migrate deploy && pm2 reload ecosystem.config.js --env production',
       'pre-setup': ''
     }
   }
