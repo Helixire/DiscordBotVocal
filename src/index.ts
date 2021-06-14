@@ -5,12 +5,19 @@ const request = require('request');
 import { Client, Message, MessageEmbed, VoiceChannel, VoiceState } from 'discord.js';
 import path from 'path';
 import { ConnectionList } from './ConnectionList';
-//{ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES] }
-import { PrismaClient, Sound } from '@prisma/client'
+import { Sound } from '@prisma/client'
+import prisma from './prismaClient'
+import { createServer } from "https";
+import { parse } from "url";
+import next from "next";
+
+const port = 3000;
+const dev = process.env.NODE_ENV !== "production";
+const app = next({ dev });
+const handle = app.getRequestHandler();
 
 
 const client = new Client();
-const prisma = new PrismaClient()
 
 
 const download = (url: string, path: string , callback : ()=>void) => {
@@ -45,7 +52,7 @@ const embedMemeInfo = (meme: Sound) => {
         .addField('Played', meme.number_played, true),
     {
         files: [{
-            attachment: meme.path,
+            attachment: 'public/memeSound/' + meme.path, // TODO SET TO URL
             name: meme.cmd + '.mp3'
         }]
     }]
@@ -154,12 +161,12 @@ client.on('message', async (message: Message) => {
         if (!param[2] && message.attachments.size) {
             param.push(message.attachments.values().next().value.url);
         }
-        let fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
-        while (fs.existsSync(fileName)) {
-            fileName = path.join(config.saveFolder, nanoid.nanoid() + '.mp3');
+        let fileName = nanoid.nanoid() + '.mp3';
+        while (fs.existsSync(path.join("public/memeSound/", fileName))) {
+            fileName = nanoid.nanoid() + '.mp3';
         }
         console.log('Start download ' + param[1]);
-        download(param[2], fileName, async () => {
+        download(param[2], path.join("public/memeSound/", fileName), async () => {
             if (!message.guild) {
                 console.log('WTF guild disapeared on download');
                 return;
@@ -318,3 +325,22 @@ client.once('ready', () => {
 });
 
 client.login(config.token);
+
+const httpsOptions = {
+    key: fs.readFileSync("./https_cert/localhost-key.pem"),
+    cert: fs.readFileSync("./https_cert/localhost.pem")
+};
+
+app.prepare().then(() => {
+    createServer(httpsOptions, (req, res) => {
+        if (!req.url) {
+            return;
+        }
+        const parsedUrl = parse(req.url, true);
+        handle(req, res, parsedUrl);
+    }).listen(port, (err: any) => {
+        if (err) throw err;
+        console.log("ready - started server on url: https://localhost:" + port);
+    });
+});
+

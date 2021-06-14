@@ -1,11 +1,10 @@
 
 node_modules/
 .env
+.next/
 config.json
-meme/
 *.db
 Model/
 
-memeFkitiTQDWqz7OdyhoSZ_M.mp3
-
 build/
+

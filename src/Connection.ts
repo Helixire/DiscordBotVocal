@@ -34,7 +34,7 @@ export class Connection {
         }
         this.playing = true;
         this.parsing = false;
-        const dispatcher = this.con.play(path);
+        const dispatcher = this.con.play('public/memeSong/' + path);
         dispatcher.on('finish', () => {
             console.log('Finished playing !');
             this.playing = false;

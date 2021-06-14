@@ -3,8 +3,6 @@
   "prefix": "!",
   // token is your discord app token https://www.writebots.com/discord-bot-token/
   "token": "TOKEN",
-  // saveFolder is where the audio will be saved
-  "saveFolder": "meme",
   // models is the models that are going to be used for the vocal recognition (optional)
   // ressource https://alphacephei.com/vosk/models
   "models": ["Model/fr", "Model/en"]
