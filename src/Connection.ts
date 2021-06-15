@@ -26,10 +26,10 @@ export class Connection {
     }
 
     async playSound(path: string, channel?: VoiceChannel) {
-        if (this.playing || !this.con) {
+        if (this.playing) {
             return false;
         }
-        if (!(await this.getCon(channel))) {
+        if (!(await this.getCon(channel)) || !this.con) {
             return false;
         }
         this.playing = true;
