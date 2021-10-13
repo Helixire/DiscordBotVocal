@@ -1,5 +1,7 @@
 DiscordBotVocal
 
+This is a NodeJs application that do voice recognition on discord to start Meme
+
 Requirement:
 
 - node
